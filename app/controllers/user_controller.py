@@ -1,3 +1,4 @@
+from datetime import timedelta
 from enum import auto
 from http import HTTPStatus
 from lib2to3.pgen2 import token
@@ -18,7 +19,7 @@ from flask_jwt_extended import (
 def create_user():
     data = request.get_json()
 
-    data["api_key"] =secrets.token_urlsafe(128)
+    #data["api_key"] =secrets.token_urlsafe(128)
     
     user:UserModel = UserModel(**data)
 
@@ -35,7 +36,7 @@ def login_user():
     if not user or not user.check_password(data['password']):
         return{'MsgError':'Email ou senha errada'}, 401
 
-    response = create_access_token(user)
+    response = create_access_token(user, expires_delta=timedelta(minutes=10))
 
     return jsonify({"token":response}), 200
 
@@ -52,23 +53,25 @@ def list_user():
 def update_user():
     session:Session = db.session
 
-    #data = request.get_json()
-    #apy_key = request.headers['AUTHORIZATION']
-    #apy_key = apy_key.replace("Bearer ", "", 1)
-  
+    data = request.get_json()
+    user_data = get_jwt_identity()
+
     user : Query = (
         session.query(UserModel)
-        .filter(UserModel.api_key == apy_key
+        .filter(UserModel.email == user_data['email']
         )).update({
             UserModel.email: data["email"],
             UserModel.name: data["name"],
             UserModel.last_name: data["last_name"],
         })
+ 
+    response : Query = (
+        session.query(UserModel)
+        .filter(UserModel.email == data['email'])).first()
 
     session.commit()
-    print(user)
 
-    return jsonify(user), 200
+    return jsonify(response), 200
 
 #@auth.login_required
 @jwt_required()
@@ -78,10 +81,11 @@ def delete_user():
     #data = request.get_json()
     #apy_key = request.headers['AUTHORIZATION']
     #apy_key = apy_key.replace("Bearer ", "", 1)
+    user_data = get_jwt_identity()
   
     user : Query = (
         session.query(UserModel)
-        .filter(UserModel.api_key == apy_key).first()
+        .filter(UserModel.email == user_data['email']).first()
         )
 
     session.delete(user)
