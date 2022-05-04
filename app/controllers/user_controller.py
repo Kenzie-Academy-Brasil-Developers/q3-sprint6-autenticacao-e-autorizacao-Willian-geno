@@ -8,7 +8,11 @@ from app.configs.auth import auth
 from app.models.user_model import UserModel
 from app.configs.database import db
 from sqlalchemy.orm import Query, Session
-
+from flask_jwt_extended import (
+    create_access_token,
+    jwt_required,
+    get_jwt_identity,
+)
 
 
 def create_user():
@@ -31,24 +35,26 @@ def login_user():
     if not user or not user.check_password(data['password']):
         return{'MsgError':'Email ou senha errada'}, 401
 
-    response = {"api_key":user.api_key}
+    response = create_access_token(user)
 
-    return jsonify(response), 200
+    return jsonify({"token":response}), 200
 
-@auth.login_required
+#@auth.login_required
+@jwt_required()
 def list_user():
 
     users : UserModel = UserModel.query.all()
 
     return jsonify(users)
 
-@auth.login_required
+#@auth.login_required
+@jwt_required()
 def update_user():
     session:Session = db.session
 
-    data = request.get_json()
-    apy_key = request.headers['AUTHORIZATION']
-    apy_key = apy_key.replace("Bearer ", "", 1)
+    #data = request.get_json()
+    #apy_key = request.headers['AUTHORIZATION']
+    #apy_key = apy_key.replace("Bearer ", "", 1)
   
     user : Query = (
         session.query(UserModel)
@@ -64,13 +70,14 @@ def update_user():
 
     return jsonify(user), 200
 
-@auth.login_required
+#@auth.login_required
+@jwt_required()
 def delete_user():
     session:Session = db.session
 
-    data = request.get_json()
-    apy_key = request.headers['AUTHORIZATION']
-    apy_key = apy_key.replace("Bearer ", "", 1)
+    #data = request.get_json()
+    #apy_key = request.headers['AUTHORIZATION']
+    #apy_key = apy_key.replace("Bearer ", "", 1)
   
     user : Query = (
         session.query(UserModel)
